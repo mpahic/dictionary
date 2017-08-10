@@ -1,0 +1,445 @@
+<!doctype html>
+<!--
+  Material Design Lite
+  Copyright 2015 Google Inc. All rights reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License
+-->
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <title>Dictionary</title>
+
+  <!-- Page styles -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400italic,500,500italic,700,700italic|Roboto+Mono:400,500,700|Material+Icons">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.blue-amber.min.css">
+
+  <style>
+
+  #popup {
+    background: #fff;
+    border: 0px;
+    width: 100%;
+    height: 100%;
+    float: left;
+    font-size: 1.2em;
+    position: fixed;
+    top: 0px;
+    right: 0px;
+    text-align: center;
+    z-index: 3;
+    -webkit-border-radius: 30px;
+    -moz-border-radius: 30px;
+    border-radius: 30px;
+    display: flex;
+  align-items: center;
+  justify-content: center;
+
+}
+
+#canvas {
+    display: block; /*--hidden by default--*/
+    background: #000;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    font-size: 1.2em;
+    position: fixed;
+    top: 0px;
+    right: 0px;
+    text-align: center;
+}
+
+  .loader {
+    margin: 0 auto;
+    border: 16px solid #f3f3f3; /* Light grey */
+    border-top: 16px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    animation: spin 2s linear infinite;
+    z-index: 5;
+    margin: auto;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    display: none;
+
+  }
+
+  @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+  }
+
+
+  </style>
+</head>
+<body>
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header mdl-layout--no-desktop-drawer-button">
+
+    <div id="content" class="mdl-layout__content">
+      <a name="top"></a>
+
+      <div id="popup" class="popup">
+        <div class="middle_content">
+          <p>Which language do you want to show first?</p>
+          <button id="language1" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" onclick="return setInitial('1')"></button>
+          <button id="language2" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" onclick="return setInitial('2')"></button>
+        </div>
+      </div>
+
+      <div id="loader" class="loader"></div>
+      <canvas id="canvas" width="320px" height="320px">Vaš preglednik ne podržava ovu funkcionalnost.</canvas>
+
+    </div>
+  </div>
+    <script src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+
+    <script>
+    var dict=findGetParameter("dictionary");
+    var language1=findGetParameter("language1");
+    var language2=findGetParameter("language2");
+    document.getElementById('language1').innerHTML = language1;
+    document.getElementById('language2').innerHTML = language2;
+    var CONST_URL="https://us-central1-dictionary-61fe2.cloudfunctions.net/";
+
+    var x;
+    var y;
+    var backImage = new Image();
+    setupCanvas();
+
+    var word= new Array;
+    var string_result="";
+    function resetGame(info){
+      document.getElementById('loader').style.display = 'block';
+
+      var xhttp = new XMLHttpRequest();
+      xhttp.open("POST", CONST_URL + "random?dictionary="+dict+"&direction="+initial, true);
+      xhttp.setRequestHeader("Content-type", "application/json");
+      xhttp.onload = function (e) {
+        if (xhttp.readyState === 4) {
+          if (xhttp.status === 200) {
+            var response = JSON.parse(xhttp.responseText);
+
+            string_result= new Array;
+            for(var i = 0; i < response.length; i++) {
+                var obj = response[i];
+              if(initial == '1') {
+                word[0]=obj.word1;
+                string_result[i]=obj.word2;
+              } else {
+                word[0]=obj.word2;
+                string_result[i]=obj.word1;
+
+              }
+            }
+
+            paintCanvas(info);
+            document.getElementById('loader').style.display = 'none';
+            console.log(response);
+          } else {
+            console.error(xhttp.statusText);
+          }
+        }
+        activeFetch = false;
+      };
+      xhttp.send();
+
+
+    }
+
+    function paintCanvas(info) {
+        context.fillStyle = "#ffffff"
+        context.fillRectR(0,0,x,y);
+        context.fillStyle = "#000000";
+        context.drawImage(backImage, 0, y*0.1, x*0.9, y*0.8);
+
+        if(alternation) {
+            //        alert(word);
+            //        context.fillText(word, x/2, y/2, x-10);
+            wrapText(word, info);
+            alternation = false;
+        } else {
+            //        alert(string_result);
+            //        context.fillText(string_result, x/2, y/2, x-10);
+            wrapText(string_result, info);
+            alternation = true;
+        }
+    }
+
+    function setupCanvas() {
+      var canvas = document.getElementById("canvas");
+      context = canvas.getContext("2d");
+
+      canvas.addEventListener("click", animateCanvas, false);
+      context.canvas.width  = window.innerWidth;
+      context.canvas.height = window.innerHeight;
+  //    alert(window.innerWidth+ "x" +window.innerHeight);
+
+      x = canvas.width;
+      y = canvas.height;
+      var supportsOrientationChange = "onorientationchange" in window,
+      orientationEvent = supportsOrientationChange ? "orientationchange" : "resize";
+
+      window.addEventListener(orientationEvent, function() {
+          context.canvas.width  = window.innerWidth;
+          context.canvas.height = window.innerHeight;
+          x = context.canvas.width;
+          y = context.canvas.height;
+          m_context.canvas.width = context.canvas.width;
+          m_context.canvas.height = context.canvas.height;
+
+          repaint();
+      }, false);
+
+      backImage.src = "fback.png";
+  //    context.drawImage(backImage, 0, y*0.1, x*0.9, y*0.9);
+
+      var m_canvas = document.createElement('canvas');
+      m_canvas.width = x;
+      m_canvas.height = y;
+      m_context = m_canvas.getContext('2d');
+
+    }
+
+    function findGetParameter(parameterName) {
+        var result = null,
+            tmp = [];
+        var items = location.search.substr(1).split("&");
+        for (var index = 0; index < items.length; index++) {
+            tmp = items[index].split("=");
+            if (tmp[0] === parameterName) result = decodeURIComponent(tmp[1]);
+        }
+        return result;
+    }
+
+    var repainting = false;
+    function repaint() {
+        context.fillStyle = "#ffffff"
+        context.fillRectR(0,0,x,y);
+        context.fillStyle = "#000000";
+        context.drawImage(backImage, 0, y*0.1, x*0.9, y*0.8);
+    //    context.save();
+    //    context.drawImage(context, 0, y*0.1, x*0.9, y*0.8);
+
+        repainting = true;
+        if(alternation) {
+            if(initial == '1'){
+                var info=language2;
+            }
+            else {
+                var info=language1;
+            }
+            wrapText(string_result, info);
+        } else {
+            if(initial == '1'){
+                var info=language1;
+            }
+            else {
+                var info=language2;
+            }
+            wrapText(word, info);
+        }
+    }
+
+    function wrapText(text, info){
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+
+        context.font = "15pt Calibri";
+        context.fillText(info, x/2, 15);
+
+        var maxLine = 8;
+        var lineHeight = y/maxLine;
+        var posY= (y - text.length * lineHeight)/2;
+        if(posY < 0 || posY > x) {
+            posY = y*0.1;
+        }
+
+        for (var n = 0; n < text.length; n++) {
+            context.font = lineHeight+"pt Calibri";
+            var metrics = context.measureText(text[n]);
+            if(metrics.width > x *0.9){
+
+                var height = y/scaleLine(text[n], maxLine);
+                context.font = height+"pt Calibri";
+                var posX = (x - metrics.width)/2;
+                context.fillText(text[n], x/2, posY, x * 0.9);
+                posY += lineHeight;
+
+            }
+
+            else {
+                var posX = (x - metrics.width)/2;
+                context.fillText(text[n], x/2, posY);
+                posY += lineHeight;
+            }
+        }
+        if (repainting)
+            repainting = false;
+        else
+            animateCanvas2();
+    }
+
+    var animation = false;
+    var alternation = true;
+    function alternateText() {
+
+        if(initial == '1'){
+            var info=language1;
+            var info2=language2;
+        }
+        else {
+            var info=language2;
+            var info2=language1;
+        }
+        if (!animation) {
+            if(alternation) {
+                resetGame(info);
+            } else {
+                paintCanvas(info2);
+            }
+
+        }
+    }
+
+    function mergeArray(splits) {
+        var text = splits[0];
+        for (var n = 1; n < text.length; n++) {
+            var metrics = context.measureText(text + " " +splits[n]);
+            if(metrics.width > x - 10)
+                return text;
+            else
+                text = text + splits[n];
+        }
+        return text;
+    }
+
+    function scaleLine(string, lineHeight){
+        lineHeight++;
+        if(lineHeight != 1){
+            var height = y/lineHeight;
+            context.font = height+"pt Calibri";
+            var metrics = context.measureText(string);
+
+            if(metrics.width > x * 0.9){
+                return scaleLine(string, lineHeight);
+            }
+            else
+                return lineHeight;
+        }
+        return 1;
+    }
+
+    var initial = "";
+    function setInitial(lang) {
+      document.getElementById('popup').style.display = 'none';
+      initial = lang;
+
+      animateCanvas();
+    }
+    var scale=1;
+    var m_context;
+    function animateCanvas() {
+        animation = true;
+        m_context.clearRect(0, 0, x, y);
+        m_context.drawImage(context.canvas, 0, 0, x, y);
+        animateCanvasDown();
+
+    }
+
+    function animateCanvasDown(){
+        context.clearRect(0, 0, x, y);
+
+        scale = scale - 0.1;
+        var xblank=(1-scale)*x/2;
+        var xblank2=x-xblank;
+        context.drawImage(m_context.canvas, (1-scale)*x/2, 0, x*scale, y);
+
+    //    context.restore();
+        if(scale > 0.1 ) {
+            setTimeout("animateCanvasDown()", 30);
+        }
+        else {
+            animation = false;
+            alternateText();
+        }
+
+    }
+
+    function animateCanvas2() {
+        animation = true;
+        m_context.clearRect(0, 0, x, y);
+        m_context.drawImage(context.canvas, 0, 0, x, y);
+        animateCanvasUp();
+
+    }
+
+    function animateCanvasUp(){
+        context.clearRect(0, 0, x, y);
+
+        scale = scale + 0.1;
+        var xblank=(1-scale)*x/2;
+        var xblank2=x-xblank;
+        context.drawImage(m_context.canvas, (1-scale)*x/2, 0, x*scale, y);
+
+    //    context.restore();
+        if(scale >= 1 ) {
+            animation = false;
+        }
+        else
+            setTimeout("animateCanvasUp()", 30);
+    }
+
+    Object.getPrototypeOf(document.createElement('canvas').getContext('2d')).fillRectR = function(x,y,w,h,r) {
+    	if (typeof r === "undefined") {
+    		r = 30;
+    	}
+    	this.beginPath();
+    	this.moveTo(x + r, y);
+    	this.lineTo(x + w - r, y);
+    	this.quadraticCurveTo(x + w, y, x + w, y + r);
+    	this.lineTo(x + w, y + h - r);
+    	this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    	this.lineTo(x + r, y + h);
+    	this.quadraticCurveTo(x, y + h, x, y + h - r);
+    	this.lineTo(x, y + r);
+    	this.quadraticCurveTo(x, y, x + r, y);
+    	this.closePath();
+    	this.fill();
+    };
+    Object.getPrototypeOf(document.createElement('canvas').getContext('2d')).strokeRectR = function(x,y,w,h,r) {
+    	if (typeof r === "undefined") {
+    		r = 30;
+    	}
+    	this.beginPath();
+    	this.moveTo(x + r, y);
+    	this.lineTo(x + w - r, y);
+    	this.quadraticCurveTo(x + w, y, x + w, y + r);
+    	this.lineTo(x + w, y + h - r);
+    	this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    	this.lineTo(x + r, y + h);
+    	this.quadraticCurveTo(x, y + h, x, y + h - r);
+    	this.lineTo(x, y + r);
+    	this.quadraticCurveTo(x, y, x + r, y);
+    	this.closePath();
+    	this.stroke();
+    };
+
+    </script>
+</body>
+</html>

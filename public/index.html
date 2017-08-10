@@ -1,0 +1,183 @@
+<!doctype html>
+<!--
+  Material Design Lite
+  Copyright 2015 Google Inc. All rights reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License
+-->
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <title>Dictionary</title>
+
+  <!-- Page styles -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400italic,500,500italic,700,700italic|Roboto+Mono:400,500,700|Material+Icons">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.blue-amber.min.css">
+
+  <style>
+  .dict-table {
+    width: 100%;
+  }
+  #dictionary-list-head tr,
+  #dictionary-list-body tr {
+    width: 100%;
+  }
+  #dictionary-list-head th,
+  #dictionary-list-body td {
+    width: 50%;
+  }
+
+
+.loader {
+  margin: 0 auto;
+  border: 16px solid #f3f3f3; /* Light grey */
+  border-top: 16px solid #3498db; /* Blue */
+  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+  animation: spin 2s linear infinite;
+  }
+
+  @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+  }
+
+  </style>
+</head>
+<body>
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header mdl-layout--no-desktop-drawer-button">
+
+    <div class="android-header mdl-layout__header mdl-layout__header--waterfall">
+      <div class="mdl-layout__header-row">
+        <span class="mdl-layout-title">
+          Dictionary
+        </span>
+
+      </div>
+    </div>
+
+    <div class="android-content mdl-layout__content">
+      <a name="top"></a>
+
+<table id="dictionary-view" class="mdl-data-table mdl-js-data-table mdl-shadow--2dp dict-table">
+  <tbody id="dictionary-view-body" class="dict-table">
+  </tbody>
+</table>
+<div id="loader" class="loader"></div>
+
+
+<footer class="mdl-mega-footer" style="display: none">
+  <div class="mdl-mega-footer__middle-section">
+
+  <div class="mdl-mega-footer__bottom-section">
+    <ul class="mdl-mega-footer__link-list">
+      <li><a href="#">Help</a></li>
+      <li><a href="#">Privacy & Terms</a></li>
+    </ul>
+  </div>
+
+</footer>
+
+    </div>
+  </div>
+    <script src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <script>
+
+      showDictionaries();
+
+      function showDictionaries() {
+  	    var xhttp = new XMLHttpRequest();
+  	    xhttp.open("POST", "https://us-central1-dictionary-61fe2.cloudfunctions.net/dictionaries", true);
+  	    xhttp.setRequestHeader("Content-type", "application/json");
+  	    xhttp.send();
+        xhttp.onload = function (e) {
+          if (xhttp.readyState === 4) {
+            if (xhttp.status === 200) {
+              var response = JSON.parse(xhttp.responseText);
+
+              for(var i = 0; i < response.length; i++) {
+                  var obj = response[i];
+                  var row = document.createElement('tr');
+                  row.innerHTML = '<tr><td class="mdl-data-table__cell--non-numeric" id="'+obj.code+'" onclick="openOnline(this)" data-lang1="'+obj.name1 +'" data-lang2="'+obj.name2+'">'+obj.name1 + " - " + obj.name2+'</td><td><button class="mdl-button mdl-js-button" data-code="'+obj.code +'"data-lang1="'+obj.name1 +'" data-lang2="'+obj.name2+'" onclick="startFlashCard(this)"><i class="material-icons">note</i></button></td></tr>';
+                  document.getElementById('dictionary-view-body').appendChild(row);
+              }
+              document.getElementById('loader').style.display = 'none';
+              console.log(response);
+            } else {
+              console.error(xhttp.statusText);
+            }
+          }
+        };
+      }
+
+      function openOnline(e) {
+        window.location.href = "./dictionary.html?dictionary="+e.id+"&language1="+e.getAttribute("data-lang1")+"&language2="+e.getAttribute("data-lang2");
+      }
+
+      function startFlashCard(e) {
+        window.location.href = "./flashcard.html?dictionary="+e.getAttribute("data-code")+"&language1="+e.getAttribute("data-lang1")+"&language2="+e.getAttribute("data-lang2");
+      }
+
+      var flashDictionary;
+      var front=true;
+      function flipFlashCard(e) {
+        console.log("flipped");
+        e.classList.toggle('flipme');
+        if(front) {
+          front = false;
+        } else {
+          openNewFlashcard(flashDictionary);
+          front = true;
+        }
+      }
+
+      function openNewFlashcard(dict) {
+        var xhttp = new XMLHttpRequest();
+  	    xhttp.open("POST", "https://us-central1-cloudcog-8bd9f.cloudfunctions.net/random?dictionary="+dict+"&direction=1", true);
+  	    xhttp.setRequestHeader("Content-type", "application/json");
+  	    xhttp.send();
+        xhttp.onload = function (e) {
+          if (xhttp.readyState === 4) {
+            if (xhttp.status === 200) {
+              var response = JSON.parse(xhttp.responseText);
+
+              for(var i = 0; i < response.length; i++) {
+                var obj = response[i];
+                if(i == 0) {
+                  document.getElementById('flash-word1').innerHTML = obj.word1;
+                  document.getElementById('flash-word2').innerHTML = obj.word2;
+                } else {
+                  document.getElementById('flash-word2').innerHTML = document.getElementById('flash-word2').innerHTML + "<br>" + obj.word2;
+                }
+              }
+              console.log(response);
+            } else {
+              console.error(xhttp.statusText);
+            }
+          }
+        };
+
+      }
+
+      function closeFlashCard() {
+        document.getElementById("flashcard").style.display = 'none';
+      }
+
+    </script>
+</body>
+</html>
